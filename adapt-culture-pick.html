@@ -1,0 +1,1386 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>ADAPT CULTURE PICK 🕹️</title>
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Press Start 2P (레트로 픽셀 폰트) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet" />
+  <!-- 폭죽 효과 -->
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
+  <!-- 커스텀 스타일 -->
+  <style>
+/* =========================================================
+   ADAPT CULTURE PICK — style.css
+   Retro Neon Arcade Gacha Machine
+   ========================================================= */
+
+/* ---- Korean pixel font (Latin은 Press Start 2P, 한글은 둥근모) ---- */
+@font-face {
+  font-family: 'DungGeunMo';
+  src: url('https://fastly.jsdelivr.net/gh/projectnoonnu/noonfonts_2001@1.1/DungGeunMo.woff') format('woff');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* ---- Design tokens ---- */
+:root {
+  --bg:        #101030;
+  --bg-deep:   #0a0a22;
+  --panel:     #16163f;
+  --panel-2:   #1e1e52;
+  --pink:      #FF0AD2;
+  --yellow:    #EFFF00;
+  --cyan:      #00E5FF;
+  --purple:    #6A00FF;
+  --white:     #F5F3FF;
+  --grid-line: rgba(106, 0, 255, 0.28);
+
+  --c-essence:    #00E5FF;
+  --c-experiment: #3DFF88;
+  --c-speed:      #FF7A00;
+  --c-data:       #3D6BFF;
+  --c-rebuild:    #FF3B6B;
+
+  --font-pixel: 'Press Start 2P', 'DungGeunMo', monospace;
+  --font-kr:    'DungGeunMo', 'Press Start 2P', monospace;
+}
+
+/* ---- Reset ---- */
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body { height: 100%; }
+
+body {
+  font-family: var(--font-kr);
+  background: var(--bg);
+  color: var(--white);
+  overflow-x: hidden;
+  min-height: 100vh;
+  line-height: 1.7;
+  letter-spacing: 0.5px;
+  -webkit-font-smoothing: none;
+  image-rendering: pixelated;
+}
+
+/* =========================================================
+   BACKGROUND — grid + CRT scanlines
+   ========================================================= */
+.bg-grid {
+  position: fixed;
+  inset: 0;
+  z-index: -3;
+  background-color: var(--bg);
+  background-image:
+    linear-gradient(var(--grid-line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
+  background-size: 40px 40px;
+  transform-origin: center bottom;
+  animation: grid-drift 18s linear infinite;
+}
+.bg-glow {
+  position: fixed;
+  inset: 0;
+  z-index: -2;
+  background:
+    radial-gradient(circle at 20% 15%, rgba(255,10,210,0.20), transparent 45%),
+    radial-gradient(circle at 82% 85%, rgba(0,229,255,0.18), transparent 45%);
+  pointer-events: none;
+}
+.bg-scanline {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  pointer-events: none;
+  background: repeating-linear-gradient(
+    to bottom,
+    rgba(0,0,0,0) 0px,
+    rgba(0,0,0,0) 2px,
+    rgba(0,0,0,0.22) 3px,
+    rgba(0,0,0,0.22) 4px
+  );
+  mix-blend-mode: multiply;
+  animation: scan-flicker 6s steps(60) infinite;
+}
+.bg-sweep {
+  position: fixed;
+  left: 0; right: 0;
+  height: 120px;
+  z-index: 51;
+  pointer-events: none;
+  background: linear-gradient(to bottom, transparent, rgba(255,255,255,0.05), transparent);
+  animation: sweep 7s linear infinite;
+}
+@keyframes grid-drift { from { background-position: 0 0, 0 0; } to { background-position: 0 40px, 40px 0; } }
+@keyframes scan-flicker { 0%,100% { opacity: 0.55; } 50% { opacity: 0.72; } }
+@keyframes sweep { from { top: -120px; } to { top: 100%; } }
+
+/* =========================================================
+   LAYOUT / SCREENS
+   ========================================================= */
+#app {
+  position: relative;
+  z-index: 1;
+  max-width: 560px;
+  margin: 0 auto;
+  min-height: 100vh;
+  padding: 20px 16px 40px;
+  display: flex;
+  flex-direction: column;
+}
+.screen { display: none; flex: 1; flex-direction: column; }
+.screen.active { display: flex; animation: screen-in 0.35s ease-out; }
+@keyframes screen-in { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
+
+/* pixel font utility */
+.px { font-family: var(--font-pixel); }
+.kr { font-family: var(--font-kr); }
+
+/* =========================================================
+   SLOGAN + [ ] BOX
+   ========================================================= */
+.slogan {
+  font-family: var(--font-pixel);
+  font-size: 11px;
+  color: var(--white);
+  text-align: center;
+  letter-spacing: 1px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: center;
+  line-height: 2.2;
+}
+.slot-box {
+  display: inline-block;
+  min-width: 34px;
+  padding: 4px 8px;
+  color: #101030;
+  background: var(--yellow);
+  border: 3px solid #101030;
+  box-shadow: 0 0 0 3px var(--yellow), 0 0 14px rgba(239,255,0,0.9);
+  text-align: center;
+  animation: box-pulse 1.6s ease-in-out infinite;
+}
+@keyframes box-pulse {
+  0%,100% { box-shadow: 0 0 0 3px var(--yellow), 0 0 8px rgba(239,255,0,0.6); }
+  50%     { box-shadow: 0 0 0 3px var(--yellow), 0 0 20px rgba(239,255,0,1); }
+}
+
+/* =========================================================
+   BUTTONS — neon pixel
+   ========================================================= */
+.btn {
+  font-family: var(--font-pixel);
+  font-size: 12px;
+  letter-spacing: 1px;
+  color: var(--white);
+  background: var(--panel-2);
+  border: 3px solid var(--pink);
+  padding: 16px 20px;
+  cursor: pointer;
+  position: relative;
+  box-shadow: 0 6px 0 #8a0073, 0 0 16px rgba(255,10,210,0.5);
+  transition: transform 0.06s steps(2), box-shadow 0.06s steps(2);
+  text-transform: uppercase;
+  user-select: none;
+}
+.btn:hover { filter: brightness(1.12); }
+.btn:active { transform: translateY(5px); box-shadow: 0 1px 0 #8a0073, 0 0 20px rgba(255,10,210,0.8); }
+.btn:disabled { opacity: 0.4; cursor: not-allowed; filter: grayscale(0.6); }
+.btn:focus-visible { outline: 3px dashed var(--yellow); outline-offset: 4px; }
+
+.btn-yellow { border-color: var(--yellow); box-shadow: 0 6px 0 #9a9c00, 0 0 16px rgba(239,255,0,0.55); }
+.btn-yellow:active { box-shadow: 0 1px 0 #9a9c00, 0 0 22px rgba(239,255,0,0.9); }
+.btn-cyan { border-color: var(--cyan); box-shadow: 0 6px 0 #0090a3, 0 0 16px rgba(0,229,255,0.55); }
+.btn-cyan:active { box-shadow: 0 1px 0 #0090a3, 0 0 22px rgba(0,229,255,0.9); }
+
+.btn-lg { font-size: 18px; padding: 24px 30px; }
+.btn-block { width: 100%; }
+
+/* =========================================================
+   MAIN SCREEN
+   ========================================================= */
+#main-screen { justify-content: center; align-items: center; text-align: center; gap: 26px; }
+
+.arcade-frame {
+  width: 100%;
+  border: 4px solid var(--white);
+  border-radius: 6px;
+  padding: 34px 22px;
+  background: linear-gradient(180deg, rgba(30,30,82,0.6), rgba(10,10,34,0.85));
+  box-shadow: 0 0 0 4px var(--purple), 0 0 30px rgba(106,0,255,0.6);
+  position: relative;
+}
+.ghost-row { font-size: 30px; letter-spacing: 10px; margin-bottom: 14px; animation: ghost-bob 1.2s steps(2) infinite; }
+@keyframes ghost-bob { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
+
+.game-title {
+  font-family: var(--font-pixel);
+  font-size: 30px;
+  line-height: 1.3;
+  color: var(--white);
+  text-shadow:
+    3px 3px 0 var(--pink),
+    -2px -2px 0 var(--cyan);
+  animation: title-flicker 3.5s steps(1) infinite;
+}
+@keyframes title-flicker {
+  0%, 92%, 100% { opacity: 1; }
+  93% { opacity: 0.4; } 94% { opacity: 1; } 96% { opacity: 0.6; }
+}
+.game-sub {
+  font-family: var(--font-kr);
+  font-size: 15px;
+  color: var(--yellow);
+  margin-top: 14px;
+}
+.hiscore {
+  position: absolute;
+  top: 10px; left: 14px;
+  font-family: var(--font-pixel);
+  font-size: 8px;
+  color: var(--yellow);
+  text-align: left;
+  line-height: 1.6;
+}
+.hearts { position: absolute; top: 10px; right: 14px; font-size: 12px; letter-spacing: 2px; }
+
+.press-start {
+  font-family: var(--font-pixel);
+  font-size: 11px;
+  color: var(--white);
+  animation: blink 1s steps(1) infinite;
+}
+@keyframes blink { 50% { opacity: 0; } }
+
+/* =========================================================
+   GAME SCREEN — the claw machine
+   ========================================================= */
+#game-screen { gap: 14px; }
+
+.game-header { display: flex; flex-direction: column; gap: 10px; }
+.stage-title { font-family: var(--font-pixel); font-size: 12px; color: var(--pink); text-align: center; text-shadow: 2px 2px 0 #101030; }
+
+/* progress gauge */
+.gauge-wrap { display: flex; align-items: center; gap: 10px; }
+.gauge-label { font-family: var(--font-pixel); font-size: 9px; color: var(--yellow); white-space: nowrap; }
+.gauge-bar {
+  flex: 1; height: 20px;
+  background: var(--bg-deep);
+  border: 3px solid var(--white);
+  padding: 2px;
+  image-rendering: pixelated;
+}
+.gauge-fill {
+  height: 100%;
+  width: 0%;
+  background: repeating-linear-gradient(90deg, var(--pink) 0 12px, #ff5ce0 12px 16px);
+  transition: width 0.4s steps(4);
+  box-shadow: 0 0 12px var(--pink);
+}
+
+/* the cabinet */
+.machine {
+  position: relative;
+  border: 4px solid var(--purple);
+  border-radius: 8px;
+  background: linear-gradient(180deg, #1b1b4d, #101030);
+  padding: 10px;
+  box-shadow: 0 0 24px rgba(106,0,255,0.4), inset 0 0 0 2px rgba(255,255,255,0.06);
+}
+.machine-brand {
+  font-family: var(--font-pixel);
+  font-size: 9px;
+  color: rgba(255,255,255,0.4);
+  text-align: center;
+  padding: 4px 0 8px;
+  letter-spacing: 2px;
+}
+
+/* glass tank */
+.tank {
+  position: relative;
+  height: 320px;
+  border: 3px solid rgba(0,229,255,0.5);
+  border-radius: 6px;
+  background:
+    linear-gradient(180deg, rgba(0,229,255,0.06), rgba(255,10,210,0.05)),
+    var(--bg-deep);
+  overflow: hidden;
+}
+.tank::after { /* glass shine */
+  content: "";
+  position: absolute; top: 0; left: 0; width: 45%; height: 100%;
+  background: linear-gradient(105deg, rgba(255,255,255,0.10), transparent 70%);
+  pointer-events: none;
+}
+
+/* claw rail + claw */
+.rail {
+  position: absolute; top: 6px; left: 0; right: 0; height: 6px;
+  background: repeating-linear-gradient(90deg, #444 0 8px, #666 8px 12px);
+  z-index: 6;
+}
+.claw {
+  position: absolute;
+  top: 8px;
+  left: 50%;
+  width: 46px;
+  z-index: 7;
+  transform: translateX(-50%);
+  transition: left 0.09s steps(3);
+  will-change: left, top;
+}
+.claw .cord {
+  width: 4px; height: 26px; margin: 0 auto;
+  background: repeating-linear-gradient(180deg, #bbb 0 4px, #888 4px 6px);
+  transition: height 0.5s steps(8);
+}
+.claw .grip {
+  position: relative; width: 46px; height: 30px; margin: -2px auto 0;
+}
+.claw .grip::before,
+.claw .grip::after {
+  content: "";
+  position: absolute; top: 0;
+  width: 12px; height: 30px;
+  background: linear-gradient(180deg, var(--cyan), #0090a3);
+  border: 2px solid #eafcff;
+  border-radius: 4px 4px 10px 10px;
+  transition: transform 0.25s steps(3);
+}
+.claw .grip::before { left: 4px; transform-origin: top right; transform: rotate(16deg); }
+.claw .grip::after  { right: 4px; transform-origin: top left;  transform: rotate(-16deg); }
+.claw.closed .grip::before { transform: rotate(2deg); }
+.claw.closed .grip::after  { transform: rotate(-2deg); }
+.claw .grip-top {
+  width: 22px; height: 10px; margin: 0 auto;
+  background: #dcdce6; border: 2px solid #fff; border-radius: 3px;
+  box-shadow: 0 0 8px rgba(0,229,255,0.7);
+}
+
+/* balls pile */
+.ball {
+  position: absolute;
+  width: 46px; height: 46px;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 20px;
+  z-index: 3;
+  border: 2px solid rgba(255,255,255,0.65);
+  box-shadow: inset -6px -6px 0 rgba(0,0,0,0.18), inset 6px 6px 0 rgba(255,255,255,0.25), 0 0 10px currentColor;
+  transition: left 0.35s steps(6), top 0.35s steps(6), transform 0.2s;
+  user-select: none;
+}
+.ball.grabbed { z-index: 8; }
+.ball.dropping { z-index: 4; }
+
+/* chute / exit basket (left-bottom) */
+.chute {
+  position: absolute;
+  left: 6px; bottom: 6px;
+  width: 62px; height: 58px;
+  border: 3px solid var(--pink);
+  border-top: none;
+  border-radius: 0 0 10px 10px;
+  background: rgba(255,10,210,0.12);
+  z-index: 5;
+  display: flex; align-items: flex-end; justify-content: center;
+  box-shadow: 0 0 14px rgba(255,10,210,0.5);
+}
+.chute-label {
+  font-family: var(--font-pixel);
+  font-size: 6px; color: var(--pink);
+  position: absolute; top: -14px; left: 0; width: 100%; text-align: center;
+}
+
+/* collected mini-balls tray */
+.tray {
+  display: flex; gap: 10px; justify-content: center; margin-top: 4px; min-height: 40px;
+}
+.tray-slot {
+  width: 40px; height: 40px; border-radius: 50%;
+  border: 2px dashed rgba(255,255,255,0.25);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 18px; color: rgba(255,255,255,0.25);
+}
+.tray-slot.filled {
+  border-style: solid;
+  border-color: var(--yellow);
+  box-shadow: 0 0 12px rgba(239,255,0,0.7), inset 0 0 8px currentColor;
+  animation: pop-in 0.4s steps(4);
+}
+@keyframes pop-in { from { transform: scale(0.2); } to { transform: scale(1); } }
+
+/* controls */
+.controls { display: flex; align-items: stretch; gap: 10px; margin-top: 6px; }
+.dpad { display: flex; gap: 10px; flex: 1; }
+.ctrl-btn {
+  font-family: var(--font-pixel); font-size: 18px;
+  flex: 1; padding: 18px 0;
+  background: var(--panel-2); color: var(--white);
+  border: 3px solid var(--cyan);
+  cursor: pointer;
+  box-shadow: 0 5px 0 #0090a3;
+  transition: transform 0.06s steps(2), box-shadow 0.06s steps(2);
+  user-select: none;
+}
+.ctrl-btn:active { transform: translateY(4px); box-shadow: 0 1px 0 #0090a3; }
+.ctrl-btn:focus-visible { outline: 3px dashed var(--yellow); outline-offset: 3px; }
+.pick-btn {
+  flex: 1.4;
+  border-color: var(--yellow);
+  box-shadow: 0 5px 0 #9a9c00, 0 0 16px rgba(239,255,0,0.6);
+  color: var(--yellow);
+  font-size: 14px;
+}
+.pick-btn:active { transform: translateY(4px); box-shadow: 0 1px 0 #9a9c00; }
+.hint { font-family: var(--font-pixel); font-size: 7px; color: rgba(255,255,255,0.5); text-align: center; line-height: 1.8; margin-top: 4px; }
+
+/* =========================================================
+   LOADING SCREEN
+   ========================================================= */
+#loading-screen { justify-content: center; align-items: center; text-align: center; gap: 26px; }
+.loading-orb {
+  width: 90px; height: 90px; border-radius: 50%;
+  border: 5px solid var(--pink);
+  border-top-color: var(--yellow);
+  border-right-color: var(--cyan);
+  animation: spin 0.9s steps(8) infinite;
+  box-shadow: 0 0 26px var(--pink);
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.loading-title { font-family: var(--font-pixel); font-size: 13px; color: var(--yellow); }
+.loading-text { font-family: var(--font-kr); font-size: 15px; color: var(--white); min-height: 26px; }
+.dots::after { content: ""; animation: dots 1.2s steps(4) infinite; }
+@keyframes dots { 0%{content:"";} 25%{content:".";} 50%{content:"..";} 75%{content:"...";} }
+
+/* =========================================================
+   RESULT SCREEN — the gacha capsule + report
+   ========================================================= */
+#result-screen { justify-content: flex-start; align-items: center; gap: 20px; padding-top: 10px; }
+
+.capsule-stage {
+  position: relative;
+  width: 260px; height: 260px;
+  display: flex; align-items: center; justify-content: center;
+  margin: 6px auto 0;
+}
+
+/* glassmorphism capsule halves */
+.capsule-top, .capsule-bottom {
+  position: absolute;
+  left: 50%;
+  width: 220px; height: 110px;
+  transform: translateX(-50%);
+  background: rgba(255,255,255,0.15);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 3px solid rgba(255,255,255,0.55);
+  box-shadow: inset 0 0 30px rgba(255,10,210,0.35), 0 0 30px rgba(0,229,255,0.35);
+  z-index: 4;
+}
+.capsule-top {
+  top: 20px;
+  border-radius: 110px 110px 0 0;
+  border-bottom: none;
+  background:
+    radial-gradient(circle at 35% 30%, rgba(255,255,255,0.6), transparent 40%),
+    rgba(255,10,210,0.18);
+}
+.capsule-bottom {
+  bottom: 20px;
+  border-radius: 0 0 110px 110px;
+  border-top: none;
+  background:
+    radial-gradient(circle at 65% 70%, rgba(255,255,255,0.35), transparent 45%),
+    rgba(0,229,255,0.16);
+}
+.capsule-seam {
+  position: absolute; left: 50%; top: 50%;
+  width: 226px; height: 8px; transform: translate(-50%,-50%);
+  background: rgba(255,255,255,0.5);
+  z-index: 5;
+  transition: opacity 0.3s;
+}
+.capsule-glow {
+  position: absolute; left: 50%; top: 50%; transform: translate(-50%,-50%);
+  width: 200px; height: 200px; border-radius: 50%;
+  background: radial-gradient(circle, rgba(239,255,0,0.5), transparent 60%);
+  z-index: 3; opacity: 0;
+  transition: opacity 0.4s;
+}
+
+/* the reward that pops out */
+.reward {
+  position: absolute; left: 50%; top: 50%;
+  transform: translate(-50%,-50%) scale(0.2);
+  z-index: 6; opacity: 0;
+  font-size: 74px;
+  filter: drop-shadow(0 0 18px var(--yellow));
+}
+
+/* OPEN state */
+.capsule-stage.open .capsule-top    { animation: split-top 0.8s steps(8) forwards; }
+.capsule-stage.open .capsule-bottom { animation: split-bottom 0.8s steps(8) forwards; }
+.capsule-stage.open .capsule-seam   { opacity: 0; }
+.capsule-stage.open .capsule-glow   { opacity: 1; animation: glow-pulse 1.4s ease-in-out infinite 0.6s; }
+.capsule-stage.open .reward         { animation: reward-pop 0.9s steps(6) forwards 0.5s; }
+
+@keyframes split-top {
+  0%   { top: 20px; opacity: 1; }
+  70%  { top: -70px; opacity: 1; }
+  100% { top: -110px; opacity: 0; }
+}
+@keyframes split-bottom {
+  0%   { bottom: 20px; opacity: 1; }
+  70%  { bottom: -70px; opacity: 1; }
+  100% { bottom: -110px; opacity: 0; }
+}
+@keyframes reward-pop {
+  0%   { transform: translate(-50%,-50%) scale(0.2) rotate(-20deg); opacity: 0; }
+  60%  { transform: translate(-50%,-90%) scale(1.25) rotate(8deg); opacity: 1; }
+  100% { transform: translate(-50%,-80%) scale(1) rotate(0deg); opacity: 1; }
+}
+@keyframes glow-pulse { 0%,100% { opacity: 0.5; } 50% { opacity: 1; } }
+
+/* ---- report card ---- */
+.report {
+  width: 100%;
+  border: 4px solid var(--yellow);
+  background: linear-gradient(180deg, var(--panel), var(--bg-deep));
+  box-shadow: 0 0 28px rgba(239,255,0,0.4), inset 0 0 0 2px rgba(255,10,210,0.3);
+  padding: 22px 18px;
+  opacity: 0;
+  transform: translateY(24px);
+}
+.report.show { animation: card-in 0.6s ease-out forwards; }
+@keyframes card-in { to { opacity: 1; transform: none; } }
+
+.report-badge {
+  display: inline-block;
+  font-family: var(--font-pixel); font-size: 8px;
+  color: #101030; background: var(--yellow);
+  padding: 5px 10px; margin-bottom: 12px;
+  letter-spacing: 1px;
+}
+.report-title {
+  font-family: var(--font-kr);
+  font-size: 22px; line-height: 1.4;
+  color: var(--pink);
+  text-shadow: 2px 2px 0 #101030;
+  margin-bottom: 6px;
+}
+.report-combo { font-family: var(--font-pixel); font-size: 8px; color: var(--cyan); margin-bottom: 16px; letter-spacing: 1px; }
+
+.score-row { display: flex; align-items: center; gap: 12px; margin-bottom: 18px; }
+.score-num { font-family: var(--font-pixel); font-size: 30px; color: var(--yellow); text-shadow: 0 0 12px rgba(239,255,0,0.8); }
+.score-bar { flex: 1; height: 16px; background: var(--bg-deep); border: 2px solid var(--white); padding: 2px; }
+.score-fill { height: 100%; width: 0; background: linear-gradient(90deg, var(--pink), var(--yellow)); transition: width 1.1s steps(10); box-shadow: 0 0 10px var(--yellow); }
+
+.report-section-label {
+  font-family: var(--font-pixel); font-size: 9px; color: var(--yellow);
+  margin: 18px 0 8px; letter-spacing: 1px;
+  border-bottom: 2px dashed rgba(239,255,0,0.4); padding-bottom: 6px;
+}
+.report-body { font-size: 15px; color: var(--white); }
+.report-body p { margin-bottom: 10px; }
+
+.chips { display: flex; flex-direction: column; gap: 8px; }
+.chip {
+  font-size: 14px; color: var(--white);
+  background: rgba(255,10,210,0.12);
+  border-left: 4px solid var(--pink);
+  padding: 8px 10px;
+}
+.chip b { color: var(--yellow); }
+
+.entry-line {
+  font-size: 14px; color: var(--cyan);
+  background: rgba(0,229,255,0.08);
+  border: 2px dashed rgba(0,229,255,0.5);
+  padding: 12px; margin-top: 4px;
+}
+
+.picked-row { display: flex; gap: 10px; justify-content: center; margin: 14px 0 4px; }
+.picked-chip {
+  font-size: 22px; width: 44px; height: 44px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  border: 2px solid var(--white);
+  box-shadow: 0 0 10px currentColor;
+}
+
+/* ---- recruit CTA ---- */
+.recruit {
+  width: 100%;
+  border: 3px solid var(--pink);
+  background: rgba(255,10,210,0.08);
+  padding: 20px 16px;
+  text-align: center;
+  box-shadow: 0 0 20px rgba(255,10,210,0.3);
+}
+.recruit-copy { font-family: var(--font-kr); font-size: 15px; line-height: 1.8; color: var(--white); margin-bottom: 16px; }
+.recruit-copy b { color: var(--yellow); }
+
+.action-row { display: flex; gap: 12px; width: 100%; }
+.action-row .btn { flex: 1; font-size: 10px; padding: 16px 8px; }
+
+/* =========================================================
+   FOOTER
+   ========================================================= */
+.foot { text-align: center; margin-top: 26px; }
+.foot .slogan { font-size: 9px; }
+
+/* =========================================================
+   RESPONSIVE
+   ========================================================= */
+@media (max-width: 420px) {
+  .game-title { font-size: 22px; }
+  .tank { height: 280px; }
+  .ball { width: 40px; height: 40px; font-size: 17px; }
+  .capsule-stage { width: 220px; height: 220px; }
+  .capsule-top, .capsule-bottom { width: 190px; height: 95px; }
+  .report-title { font-size: 19px; }
+  .btn-lg { font-size: 15px; }
+}
+
+/* =========================================================
+   REDUCED MOTION
+   ========================================================= */
+@media (prefers-reduced-motion: reduce) {
+  * { animation-duration: 0.001ms !important; animation-iteration-count: 1 !important; transition-duration: 0.001ms !important; }
+}
+
+</style>
+</head>
+<body>
+  <!-- 배경 레이어 -->
+  <div class="bg-grid"></div>
+  <div class="bg-glow"></div>
+  <div class="bg-scanline"></div>
+  <div class="bg-sweep"></div>
+
+  <div id="app">
+
+    <!-- ============ MAIN SCREEN ============ -->
+    <section id="main-screen" class="screen active">
+      <div class="arcade-frame">
+        <div class="hiscore">HI-SCORE<br />123000</div>
+        <div class="hearts">❤️❤️❤️❤️❤️</div>
+        <div class="ghost-row">👾 👾 👾</div>
+        <h1 class="game-title">ADAPT<br />CULTURE<br />PICK</h1>
+        <p class="game-sub">인형뽑기로 만나는 우리 팀의 컬처</p>
+      </div>
+
+      <p class="slogan">
+        WE SOLVE <span class="slot-box">&nbsp;?&nbsp;</span> 'S PROBLEM
+      </p>
+
+      <button id="start-btn" class="btn btn-lg btn-yellow">▶ 게임 START</button>
+      <p class="press-start">PRESS START TO PLAY</p>
+    </section>
+
+    <!-- ============ GAME SCREEN ============ -->
+    <section id="game-screen" class="screen">
+      <div class="game-header">
+        <h2 class="stage-title">🕹️ CULTURE CLAW MACHINE</h2>
+        <div class="gauge-wrap">
+          <span class="gauge-label">PICK</span>
+          <div class="gauge-bar"><div id="gauge-fill" class="gauge-fill"></div></div>
+          <span id="gauge-count" class="gauge-label">0/3</span>
+        </div>
+      </div>
+
+      <!-- 캐비닛 -->
+      <div class="machine">
+        <div class="machine-brand">ADAPT GACHA · SOLVE [ ? ]'S PROBLEM</div>
+        <div id="tank" class="tank">
+          <div class="rail"></div>
+          <!-- 집게 -->
+          <div id="claw" class="claw">
+            <div class="grip-top"></div>
+            <div class="cord"></div>
+            <div class="grip"></div>
+          </div>
+          <!-- 배출구 -->
+          <div class="chute"><span class="chute-label">OUT</span></div>
+          <!-- 볼은 JS에서 생성 -->
+        </div>
+      </div>
+
+      <!-- 획득 트레이 -->
+      <div class="tray">
+        <div class="tray-slot">?</div>
+        <div class="tray-slot">?</div>
+        <div class="tray-slot">?</div>
+      </div>
+
+      <!-- 컨트롤 -->
+      <div class="controls">
+        <div class="dpad">
+          <button id="left-btn" class="ctrl-btn" aria-label="집게 왼쪽">◀</button>
+          <button id="right-btn" class="ctrl-btn" aria-label="집게 오른쪽">▶</button>
+        </div>
+        <button id="pick-btn" class="ctrl-btn pick-btn">PICK!</button>
+      </div>
+      <p class="hint">← → 방향키로 이동 · SPACE 로 뽑기 · 총 3번 뽑으면 결과 등장</p>
+    </section>
+
+    <!-- ============ LOADING SCREEN ============ -->
+    <section id="loading-screen" class="screen">
+      <div class="loading-orb"></div>
+      <p class="loading-title">AI CULTURE-FIT 분석중</p>
+      <p class="loading-text"><span id="loading-msg">데이터를 분석하는 중</span><span class="dots"></span></p>
+      <p class="slogan" style="font-size:8px;">WE SOLVE <span class="slot-box">&nbsp;?&nbsp;</span> 'S PROBLEM</p>
+    </section>
+
+    <!-- ============ RESULT SCREEN ============ -->
+    <section id="result-screen" class="screen">
+      <h2 class="stage-title" style="color:var(--yellow)">🎉 컬처핏 리포트 획득!</h2>
+
+      <!-- 가챠 캡슐 -->
+      <div id="capsule-stage" class="capsule-stage">
+        <div class="capsule-glow"></div>
+        <div class="capsule-top"></div>
+        <div class="capsule-bottom"></div>
+        <div class="capsule-seam"></div>
+        <div class="reward">🎫</div>
+      </div>
+
+      <!-- 결과 리포트 카드 -->
+      <div id="report-card" class="report">
+        <span class="report-badge">CULTURE-FIT REPORT</span>
+        <h3 id="report-title" class="report-title">타이틀</h3>
+        <p id="report-combo" class="report-combo">COMBO</p>
+
+        <div class="score-row">
+          <span id="score-num" class="score-num">0%</span>
+          <div class="score-bar"><div id="score-fill" class="score-fill"></div></div>
+        </div>
+
+        <div class="picked-row" id="picked-row"></div>
+
+        <div class="report-section-label">▷ AI 분석</div>
+        <div id="report-body" class="report-body"></div>
+
+        <div class="report-section-label">▷ 당신의 강점 TOP 3</div>
+        <div id="report-strengths" class="chips"></div>
+
+        <div class="report-section-label">▷ 가상 입사 첫 주</div>
+        <p id="report-entry" class="entry-line"></p>
+      </div>
+
+      <!-- 채용 유도 -->
+      <div class="recruit">
+        <p class="recruit-copy">
+          이런 킹받고 멋진 방식으로 직장인의 문제를 해결하는 팀이 궁금하다면?<br />
+          <b>We solve <span class="slot-box" style="animation:none;box-shadow:0 0 0 3px var(--yellow),0 0 12px rgba(239,255,0,.9)">&nbsp;ADAPT&nbsp;</span>'s problem!</b>
+        </p>
+        <a href="https://adapt.im/" target="_blank" rel="noopener" class="btn btn-yellow btn-block" style="text-decoration:none;display:block;text-align:center;">🚀 채용 보러가기</a>
+      </div>
+
+      <!-- 액션 -->
+      <div class="action-row">
+        <button id="retry-btn" class="btn btn-cyan">🔄 다시 뽑기</button>
+        <button id="share-btn" class="btn">📤 결과 공유</button>
+      </div>
+
+      <div class="foot">
+        <button id="retry-btn-2" class="press-start" style="background:none;border:none;color:var(--white);cursor:pointer;">↺ 처음으로</button>
+      </div>
+    </section>
+
+  </div>
+
+  <!-- 커스텀 스크립트 -->
+  <script>
+/* =========================================================
+   ADAPT CULTURE PICK — script.js
+   직접 조작 인형뽑기 + 조합 분석 + 가챠 캡슐 오픈
+   ========================================================= */
+
+/* ---------- 1. ADAPT 컬처 캐릭터 데이터 ---------- */
+const CHARACTERS = {
+  essence: {
+    id: 'essence', emoji: '🔍', name: '본질 탐구자', color: 'var(--c-essence)',
+    slogan: '우리는 본질에 집중! 나머지는 샤프닝합니다.',
+    sub: '핵심 3줄이면 충분합니다.',
+    strengths: ['불필요한 걸 걷어내고 핵심만 남기는 정리력', '겉이 아닌 근본 원인을 파고드는 통찰', '"왜?"를 세 번 던지는 질문 근육']
+  },
+  experiment: {
+    id: 'experiment', emoji: '🧪', name: '실험가', color: 'var(--c-experiment)',
+    slogan: '우리의 성공은 가설로 시작해 검증으로 완성됩니다.',
+    sub: '완벽보다 빠른 실험.',
+    strengths: ['일단 던져보고 배우는 가설 검증력', '실패를 데이터로 바꾸는 회복탄력성', '작게 쪼개 빠르게 테스트하는 설계력']
+  },
+  speed: {
+    id: 'speed', emoji: '🚀', name: '스피드 러너', color: 'var(--c-speed)',
+    slogan: '우리는 얼라인과 빠른 실행을 성공의 핵심이라고 생각합니다.',
+    sub: '회의보다 실행.',
+    strengths: ['말보다 결과물이 먼저 나오는 실행력', '팀을 한 방향으로 정렬시키는 얼라인 감각', '병목을 못 참는 추진력']
+  },
+  data: {
+    id: 'data', emoji: '📊', name: '데이터 파일럿', color: 'var(--c-data)',
+    slogan: '우리는 결과 측정을 통해 성공을 리딩합니다.',
+    sub: '숫자는 거짓말하지 않습니다.',
+    strengths: ['감이 아닌 지표로 판단하는 냉정함', '노이즈 속에서 신호를 찾는 분석력', '측정 가능한 목표를 설계하는 정밀함']
+  },
+  rebuild: {
+    id: 'rebuild', emoji: '🔥', name: '리빌더', color: 'var(--c-rebuild)',
+    slogan: '우리는 성공은 강화하고 실패는 과감히 축소합니다.',
+    sub: '미련보다 개선.',
+    strengths: ['안 되는 걸 과감히 접는 결단력', '되는 걸 몰아주는 자원 집중력', '어제의 방식을 오늘 다시 부수는 용기']
+  }
+};
+const CHAR_KEYS = Object.keys(CHARACTERS);
+
+/* ---------- 2. 조합 분석 사전 ---------- */
+// 페어 조합 (정렬된 키 조합을 key로 사용)
+const COMBOS = {
+  'data|speed': {
+    title: '데이터를 신뢰하는 무한 스피드 러너',
+    desc: [
+      '당신은 근거 없는 속도를 경계합니다. 지표로 방향을 잡은 순간, 누구보다 빠르게 치고 나가죠. "일단 재고, 바로 달린다" — 그게 당신의 리듬입니다.',
+      '측정과 실행이 한 몸이라, 실험 결과가 나오기 무섭게 다음 스프린트를 시작합니다. 팀이 데이터를 보며 망설일 때 당신은 이미 다음 가설을 배포하고 있습니다.'
+    ]
+  },
+  'essence|speed': {
+    title: '본질 관통 초고속 실행가',
+    desc: [
+      '당신은 곁가지를 쳐낸 뒤 곧장 질주합니다. 문제의 심장을 정확히 찌르고, 군더더기 없이 결과로 증명하죠. 빠른데 방향까지 정확한, 팀이 가장 아끼는 유형입니다.',
+      '"이거 왜 하는 거죠?"로 회의를 3분 만에 끝내고, 남은 시간엔 그냥 만들어 옵니다. 본질과 속도가 만나면 낭비가 사라집니다.'
+    ]
+  },
+  'essence|data': {
+    title: '숫자로 본질을 증명하는 분석가',
+    desc: [
+      '당신은 "느낌상 이게 중요해 보인다"를 믿지 않습니다. 핵심이 무엇인지 정의하고, 그것을 숫자로 못 박아 증명하죠. 논쟁을 지표 하나로 종결시키는 사람입니다.',
+      '표면 지표에 속지 않고 진짜 원인 지표를 찾아냅니다. 본질과 데이터가 만나면 의사결정에 흔들림이 없어집니다.'
+    ]
+  },
+  'essence|experiment': {
+    title: '핵심만 파고드는 가설 사냥꾼',
+    desc: [
+      '당신은 아무거나 실험하지 않습니다. 가장 중요한 가정을 먼저 골라, 그것만 정조준해 검증하죠. 리소스를 낭비하지 않는 똑똑한 실험가입니다.',
+      '"이 실험이 본질을 건드리나?"를 항상 먼저 묻습니다. 그래서 당신의 실험은 언제나 배울 게 많습니다.'
+    ]
+  },
+  'essence|rebuild': {
+    title: '본질만 남기고 다 부수는 재설계자',
+    desc: [
+      '당신은 유지보수보다 재정의를 택합니다. 핵심 가치를 지키되, 낡은 구조는 미련 없이 허물죠. 남길 것과 버릴 것을 칼같이 나누는 사람입니다.',
+      '"이거 원래 왜 이렇게 했더라"에서 멈추지 않고, "그럼 지금 다시 만들면?"으로 넘어갑니다. 본질과 개선이 만나면 조직이 가벼워집니다.'
+    ]
+  },
+  'experiment|speed': {
+    title: '초고속 가설 검증 머신',
+    desc: [
+      '당신에게 아이디어는 회의 안건이 아니라 오늘 밤 배포할 실험입니다. 빠르게 던지고, 빠르게 배우고, 빠르게 다음으로 넘어가죠.',
+      '완벽한 계획을 기다리지 않습니다. 작은 실험 여러 개를 동시에 굴리며 팀의 학습 속도 자체를 끌어올립니다.'
+    ]
+  },
+  'data|experiment': {
+    title: '지표로 검증하는 실험 설계자',
+    desc: [
+      '당신은 "잘 된 것 같아요"를 인정하지 않습니다. 실험마다 성공 지표를 미리 정하고, 숫자로 결론을 내리죠. 그래서 당신의 실험은 재현 가능합니다.',
+      '가설-검증-측정의 루프를 촘촘하게 돌립니다. 데이터와 실험이 만나면 운이 아니라 방법론으로 성공합니다.'
+    ]
+  },
+  'experiment|rebuild': {
+    title: '부수고 다시 실험하는 개척자',
+    desc: [
+      '당신은 실패한 실험 앞에서 슬퍼하지 않습니다. 배운 걸 챙기고, 안 되는 구조를 접고, 곧바로 새 가설을 세우죠. 폐허 위에서 가장 잘 자라는 사람입니다.',
+      '"이 방식은 여기까지"라고 선언하는 데 주저함이 없습니다. 실험과 개선이 만나면 조직이 같은 실수를 반복하지 않습니다.'
+    ]
+  },
+  'data|rebuild': {
+    title: '데이터로 손절하는 냉정한 개선가',
+    desc: [
+      '당신은 지표가 죽은 프로젝트를 감정으로 붙잡지 않습니다. 숫자가 아니라고 말하면, 과감히 접고 자원을 되는 쪽으로 몰아주죠.',
+      '"조금만 더 해보자"의 함정을 지표로 끊어냅니다. 데이터와 개선이 만나면 조직의 리소스가 항상 승률 높은 곳에 있습니다.'
+    ]
+  },
+  'rebuild|speed': {
+    title: '빠르게 부수고 빠르게 다시 짓는 리빌더',
+    desc: [
+      '당신은 정체를 가장 싫어합니다. 안 되는 걸 빠르게 접고, 되는 걸 빠르게 키우죠. 방향 전환의 속도가 남다른 사람입니다.',
+      '어제의 최선이 오늘의 병목이라면, 오늘 바로 갈아엎습니다. 개선과 속도가 만나면 팀이 늙지 않습니다.'
+    ]
+  }
+};
+
+// 단일 캐릭터 3연속(x3)
+const SOLO = {
+  essence:    { title: '본질에 미친 순수 탐구자', desc: ['당신은 오직 하나를 봅니다 — "이게 진짜 중요한가?" 세 번의 선택 모두 본질을 향했다는 건, 흔들리지 않는 기준을 가졌다는 뜻입니다.', '남들이 화려함에 흔들릴 때 당신은 핵심만 붙잡습니다. 이 팀에서 당신은 방향을 지키는 나침반이 될 겁니다.'] },
+  experiment: { title: '실험이 곧 숨쉬기인 가설가', desc: ['당신에게 세상은 거대한 실험실입니다. 세 번 모두 실험가를 뽑았다는 건, 확신보다 검증을 사랑한다는 증거죠.', '실패를 두려워하지 않기에 가장 빠르게 배웁니다. 당신은 팀의 학습 속도를 끌어올리는 엔진입니다.'] },
+  speed:      { title: '멈추면 죽는 순수 스피드 러너', desc: ['당신은 결과물로 말합니다. 세 번의 선택 모두 실행을 향했다는 건, 병목을 견디지 못하는 추진력의 소유자라는 뜻이죠.', '회의가 길어지면 당신은 이미 프로토타입을 만들고 있습니다. 이 팀에서 당신은 정체를 부수는 추진체입니다.'] },
+  data:       { title: '숫자에 진심인 데이터 파일럿', desc: ['당신은 감이 아니라 지표로 세상을 읽습니다. 세 번 모두 데이터를 택했다는 건, 근거 없는 주장을 참지 못한다는 뜻이죠.', '노이즈 속에서 신호를 찾아내는 눈이 있습니다. 당신은 팀의 의사결정을 흔들림 없게 만드는 항법사입니다.'] },
+  rebuild:    { title: '부수는 데 거침없는 순수 리빌더', desc: ['당신은 미련이 없습니다. 세 번 모두 리빌더를 뽑았다는 건, 어제의 성공에도 안주하지 않는다는 증거죠.', '되는 건 몰아주고 안 되는 건 접는 결단이 몸에 뱄습니다. 당신은 조직을 계속 젊게 유지하는 리모델러입니다.'] }
+};
+
+// 세 개 모두 다를 때
+const TRIO = {
+  title: '전방위 하이브리드 플레이어',
+  desc: [
+    '당신은 한 가지 색으로 규정되지 않습니다. 본질·실험·속도·데이터·개선 중 세 가지를 고르게 갖춘, 상황에 따라 무기를 바꾸는 올라운더죠.',
+    '어떤 문제가 와도 대응할 카드가 여러 장입니다. 팀이 어느 방향으로 기울든, 당신은 균형을 잡아주는 멀티툴이 됩니다.'
+  ]
+};
+
+/* ---------- 3. 상태 ---------- */
+const state = {
+  clawX: 50,          // 0~100 %
+  step: 8,
+  balls: [],          // {el, key, x} tank 내부 볼
+  picked: [],         // 획득한 key 배열
+  busy: false,
+  maxPicks: 3
+};
+
+/* ---------- 4. DOM ---------- */
+const $ = (sel) => document.querySelector(sel);
+const screens = {
+  main:    $('#main-screen'),
+  game:    $('#game-screen'),
+  loading: $('#loading-screen'),
+  result:  $('#result-screen')
+};
+function showScreen(name) {
+  Object.values(screens).forEach(s => s.classList.remove('active'));
+  screens[name].classList.add('active');
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+const delay = (ms) => new Promise(res => setTimeout(res, ms));
+
+/* ---------- 5. 게임 초기화 ---------- */
+function initMachine() {
+  state.clawX = 50;
+  state.picked = [];
+  state.balls = [];
+  state.busy = false;
+
+  const tank = $('#tank');
+  // 기존 볼 제거
+  tank.querySelectorAll('.ball').forEach(b => b.remove());
+
+  // 15~18개 볼 무작위 생성
+  const total = 16;
+  const rows = 3;                 // 바닥에서 위로 쌓이는 층
+  const perRow = Math.ceil(total / rows);
+  let count = 0;
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < perRow && count < total; c++) {
+      const key = CHAR_KEYS[Math.floor(Math.random() * CHAR_KEYS.length)];
+      const ch = CHARACTERS[key];
+      const ball = document.createElement('div');
+      ball.className = 'ball';
+      ball.textContent = ch.emoji;
+      ball.style.color = ch.color;
+
+      // 층/열 기반 + 지터로 자연스럽게 쌓인 느낌
+      const jitterX = (Math.random() - 0.5) * 8;
+      const jitterY = (Math.random() - 0.5) * 10;
+      const xPct = 8 + (c / (perRow - 1 || 1)) * 78 + jitterX;   // 8~86%
+      const bottomPx = 8 + r * 44 + jitterY;
+
+      ball.style.left = `calc(${clamp(xPct, 4, 88)}% - 23px)`;
+      ball.style.top = 'auto';
+      ball.style.bottom = `${bottomPx}px`;
+      ball.dataset.key = key;
+      ball.dataset.x = clamp(xPct, 4, 88);
+
+      tank.appendChild(ball);
+      state.balls.push({ el: ball, key, x: clamp(xPct, 4, 88) });
+      count++;
+    }
+  }
+  updateClaw();
+  updateGauge();
+  updateTray();
+}
+
+function clamp(v, min, max) { return Math.max(min, Math.min(max, v)); }
+
+/* ---------- 6. 집게 조작 ---------- */
+function updateClaw() {
+  const claw = $('#claw');
+  claw.style.left = state.clawX + '%';
+}
+function moveClaw(dir) {
+  if (state.busy) return;
+  state.clawX = clamp(state.clawX + dir * state.step, 6, 94);
+  updateClaw();
+}
+
+/* ---------- 7. 포획 로직 ---------- */
+async function doPick() {
+  if (state.busy) return;
+  if (state.picked.length >= state.maxPicks) return;
+  if (state.balls.length === 0) return;
+
+  state.busy = true;
+  setControls(false);
+
+  const claw = $('#claw');
+  const cord = claw.querySelector('.cord');
+  const tank = $('#tank');
+  const tankRect = tank.getBoundingClientRect();
+
+  // 집게 x 위치에서 가장 가까운 볼 선택 (윗층 우선)
+  let target = null, best = Infinity;
+  state.balls.forEach(b => {
+    const dx = Math.abs(b.x - state.clawX);
+    const bottom = parseFloat(b.el.style.bottom);
+    const score = dx - bottom * 0.05; // 가까우면서 위에 있는 볼 우선
+    if (score < best) { best = score; target = b; }
+  });
+
+  // 1) 집게 하강
+  const targetBottom = parseFloat(target.el.style.bottom);
+  const dropHeight = tankRect.height - targetBottom - 60;
+  cord.style.height = Math.max(20, dropHeight) + 'px';
+  await delay(560);
+
+  // 2) 집게 닫기 + 볼 잡기
+  claw.classList.add('closed');
+  await delay(260);
+
+  const ballGrabRect = target.el.getBoundingClientRect();
+  target.el.classList.add('grabbed');
+  // 볼을 집게 손끝에 부착
+  target.el.style.transition = 'none';
+  const grabLeftPct = state.clawX;
+  target.el.style.left = `calc(${grabLeftPct}% - 23px)`;
+  target.el.style.bottom = 'auto';
+  target.el.style.top = (parseFloat(cord.style.height) + 40) + 'px';
+  // reflow
+  void target.el.offsetWidth;
+  target.el.style.transition = 'top 0.5s steps(8), left 0.35s steps(6)';
+
+  // 3) 집게 상승 (볼 같이)
+  cord.style.height = '26px';
+  target.el.style.top = '58px';
+  await delay(560);
+
+  // 4) 배출구(좌측)로 이동
+  claw.style.transition = 'left 0.6s steps(8)';
+  state.clawX = 12;
+  updateClaw();
+  target.el.style.transition = 'left 0.6s steps(8), top 0.35s steps(6)';
+  target.el.style.left = `calc(12% - 23px)`;
+  await delay(640);
+
+  // 5) 배출구에 툭 떨어뜨리기
+  claw.classList.remove('closed');
+  target.el.classList.remove('grabbed');
+  target.el.classList.add('dropping');
+  target.el.style.transition = 'top 0.45s steps(6)';
+  target.el.style.top = (tankRect.height - 40) + 'px';
+  await delay(480);
+
+  // 6) 획득 처리
+  state.picked.push(target.key);
+  state.balls = state.balls.filter(b => b !== target);
+  target.el.remove();
+  updateGauge();
+  updateTray();
+
+  // 집게 원위치
+  claw.style.transition = 'left 0.4s steps(6)';
+  state.clawX = 50;
+  updateClaw();
+  await delay(400);
+  claw.style.transition = 'left 0.09s steps(3)';
+
+  state.busy = false;
+
+  if (state.picked.length >= state.maxPicks) {
+    await delay(300);
+    runLoading();
+  } else {
+    setControls(true);
+  }
+}
+
+/* ---------- 8. UI 업데이트 ---------- */
+function updateGauge() {
+  const pct = (state.picked.length / state.maxPicks) * 100;
+  $('#gauge-fill').style.width = pct + '%';
+  $('#gauge-count').textContent = `${state.picked.length}/${state.maxPicks}`;
+}
+function updateTray() {
+  const slots = document.querySelectorAll('.tray-slot');
+  slots.forEach((slot, i) => {
+    if (state.picked[i]) {
+      const ch = CHARACTERS[state.picked[i]];
+      slot.textContent = ch.emoji;
+      slot.classList.add('filled');
+      slot.style.color = ch.color;
+    } else {
+      slot.textContent = '?';
+      slot.classList.remove('filled');
+      slot.style.color = '';
+    }
+  });
+}
+function setControls(enabled) {
+  document.querySelectorAll('.ctrl-btn, .pick-btn').forEach(b => b.disabled = !enabled);
+}
+
+/* ---------- 9. 로딩 ---------- */
+const LOADING_MSGS = [
+  '컬처 데이터를 분석하는 중',
+  '가설을 검증하는 중',
+  '핵심 지표를 측정하는 중',
+  '결과를 샤프닝하는 중'
+];
+async function runLoading() {
+  showScreen('loading');
+  const msgEl = $('#loading-msg');
+  for (let i = 0; i < LOADING_MSGS.length; i++) {
+    msgEl.textContent = LOADING_MSGS[i];
+    await delay(700);
+  }
+  buildResult();
+}
+
+/* ---------- 10. 결과 분석 & 렌더 ---------- */
+function analyze(picked) {
+  const freq = {};
+  picked.forEach(k => freq[k] = (freq[k] || 0) + 1);
+  const uniq = Object.keys(freq);
+
+  let combo;
+  if (uniq.length === 1) {
+    combo = SOLO[uniq[0]];
+  } else if (uniq.length === 3) {
+    combo = TRIO;
+  } else {
+    // 2종: 빈도 상위 2개(=사실상 전부)를 정렬 키로
+    const pair = uniq.slice().sort();
+    const key = pair.join('|');
+    combo = COMBOS[key] || {
+      title: `${CHARACTERS[pair[0]].name} × ${CHARACTERS[pair[1]].name}`,
+      desc: ['서로 다른 두 강점이 당신 안에서 균형을 이룹니다. 상황에 따라 무기를 바꿔 쓰는 유연한 플레이어입니다.']
+    };
+  }
+
+  // 강점 3개: 뽑힌 캐릭터들의 강점 풀에서 중복 없이 3개
+  const pool = [];
+  uniq.forEach(k => CHARACTERS[k].strengths.forEach(s => pool.push({ k, s })));
+  shuffle(pool);
+  const strengths = [];
+  const usedText = new Set();
+  for (const item of pool) {
+    if (!usedText.has(item.s)) { strengths.push(item); usedText.add(item.s); }
+    if (strengths.length === 3) break;
+  }
+
+  // 컬처핏 점수 82~96
+  const score = 82 + Math.floor(Math.random() * 15);
+
+  // 가상 입사 모습
+  const dominant = uniq.sort((a, b) => freq[b] - freq[a])[0];
+  const entryLines = {
+    essence:    '입사 첫 주, "이 프로젝트 진짜 핵심이 뭐죠?" 한마디로 팀 회의의 방향을 바로잡는 당신.',
+    experiment: '입사 첫 주, 사이드 실험 하나를 몰래 돌려보고 "이거 될 것 같은데요?" 라며 데이터를 들고 오는 당신.',
+    speed:      '입사 첫 주, 온보딩 문서를 읽다 말고 이미 첫 PR을 올려버리는 당신.',
+    data:       '입사 첫 주, 대시보드부터 열어 "이 지표가 좀 이상한데요?"를 발견하는 당신.',
+    rebuild:    '입사 첫 주, "이 레거시 프로세스 왜 이렇게 돌아가요?" 라며 개선안을 슬쩍 꺼내는 당신.'
+  };
+
+  return {
+    combo,
+    score,
+    strengths,
+    entry: entryLines[dominant],
+    picked
+  };
+}
+
+function shuffle(arr) {
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+
+function buildResult() {
+  const data = analyze(state.picked);
+
+  // 텍스트 바인딩
+  $('#report-title').textContent = data.combo.title;
+  $('#report-combo').textContent = 'COMBO: ' + [...new Set(state.picked)].map(k => CHARACTERS[k].name).join(' + ');
+
+  const bodyEl = $('#report-body');
+  bodyEl.innerHTML = '';
+  data.combo.desc.forEach(p => {
+    const el = document.createElement('p');
+    el.textContent = p;
+    bodyEl.appendChild(el);
+  });
+
+  const chipsEl = $('#report-strengths');
+  chipsEl.innerHTML = '';
+  data.strengths.forEach((item, i) => {
+    const el = document.createElement('div');
+    el.className = 'chip';
+    el.innerHTML = `<b>0${i + 1}</b> · ${item.s} <span style="opacity:.6">(${CHARACTERS[item.k].emoji}${CHARACTERS[item.k].name})</span>`;
+    chipsEl.appendChild(el);
+  });
+
+  $('#report-entry').textContent = data.entry;
+
+  // 획득 캐릭터 칩
+  const pickedRow = $('#picked-row');
+  pickedRow.innerHTML = '';
+  state.picked.forEach(k => {
+    const ch = CHARACTERS[k];
+    const el = document.createElement('div');
+    el.className = 'picked-chip';
+    el.textContent = ch.emoji;
+    el.style.color = ch.color;
+    pickedRow.appendChild(el);
+  });
+
+  // 점수 저장 (애니메이션용)
+  screens.result.dataset.score = data.score;
+
+  showScreen('result');
+  openCapsule(data.score);
+
+  // 공유용 요약 저장
+  window.__adaptResult = {
+    title: data.combo.title,
+    score: data.score
+  };
+}
+
+/* ---------- 11. 캡슐 오픈 연출 ---------- */
+async function openCapsule(score) {
+  const stage = $('#capsule-stage');
+  const report = $('#report-card');
+  stage.classList.remove('open');
+  report.classList.remove('show');
+  $('#score-fill').style.width = '0%';
+  $('#score-num').textContent = '0%';
+
+  await delay(500);
+  // 캡슐 쪼개짐
+  stage.classList.add('open');
+
+  // 폭죽
+  await delay(500);
+  fireConfetti();
+
+  // 리포트 카드 등장
+  await delay(700);
+  report.classList.add('show');
+
+  // 점수 카운트업
+  await delay(300);
+  $('#score-fill').style.width = score + '%';
+  animateScore(score);
+}
+
+function animateScore(target) {
+  const el = $('#score-num');
+  let cur = 0;
+  const t = setInterval(() => {
+    cur += 2;
+    if (cur >= target) { cur = target; clearInterval(t); }
+    el.textContent = cur + '%';
+  }, 30);
+}
+
+function fireConfetti() {
+  if (typeof confetti !== 'function') return;
+  const colors = ['#FF0AD2', '#EFFF00', '#00E5FF', '#6A00FF', '#3DFF88'];
+  confetti({ particleCount: 120, spread: 80, origin: { y: 0.5 }, colors });
+  setTimeout(() => confetti({ particleCount: 80, angle: 60, spread: 70, origin: { x: 0, y: 0.6 }, colors }), 200);
+  setTimeout(() => confetti({ particleCount: 80, angle: 120, spread: 70, origin: { x: 1, y: 0.6 }, colors }), 350);
+}
+
+/* ---------- 12. 공유 / 다시하기 ---------- */
+async function shareResult() {
+  const r = window.__adaptResult || { title: '컬처핏', score: 90 };
+  const text = `[ADAPT CULTURE PICK] 내 컬처핏은 "${r.title}" (${r.score}%)! 너도 뽑아봐 👉`;
+  const shareData = { title: 'ADAPT CULTURE PICK', text, url: location.href };
+  try {
+    if (navigator.share) {
+      await navigator.share(shareData);
+    } else {
+      await navigator.clipboard.writeText(`${text} ${location.href}`);
+      toast('결과가 클립보드에 복사됐어요!');
+    }
+  } catch (e) {
+    // 사용자가 공유 취소 → 무시
+  }
+}
+
+function retry() {
+  initMachine();
+  showScreen('game');
+}
+
+function toast(msg) {
+  let t = document.getElementById('toast');
+  if (!t) {
+    t = document.createElement('div');
+    t.id = 'toast';
+    t.style.cssText = 'position:fixed;left:50%;bottom:32px;transform:translateX(-50%);background:#101030;color:#EFFF00;border:3px solid #EFFF00;padding:12px 18px;font-family:var(--font-kr);font-size:14px;z-index:999;box-shadow:0 0 20px rgba(239,255,0,.6)';
+    document.body.appendChild(t);
+  }
+  t.textContent = msg;
+  t.style.opacity = '1';
+  setTimeout(() => { t.style.transition = 'opacity .5s'; t.style.opacity = '0'; }, 1800);
+}
+
+/* ---------- 13. 이벤트 바인딩 ---------- */
+function bindEvents() {
+  $('#start-btn').addEventListener('click', () => { initMachine(); showScreen('game'); });
+  $('#left-btn').addEventListener('click', () => moveClaw(-1));
+  $('#right-btn').addEventListener('click', () => moveClaw(1));
+  $('#pick-btn').addEventListener('click', doPick);
+  $('#retry-btn').addEventListener('click', retry);
+  $('#retry-btn-2').addEventListener('click', retry);
+  $('#share-btn').addEventListener('click', shareResult);
+
+  // 키보드 매핑
+  document.addEventListener('keydown', (e) => {
+    if (!screens.game.classList.contains('active')) return;
+    if (e.key === 'ArrowLeft')  { e.preventDefault(); moveClaw(-1); }
+    if (e.key === 'ArrowRight') { e.preventDefault(); moveClaw(1); }
+    if (e.key === ' ' || e.key === 'Spacebar') { e.preventDefault(); doPick(); }
+  });
+
+  // 버튼 꾹 누르면 연속 이동
+  let holdTimer = null;
+  const holdMove = (dir) => {
+    moveClaw(dir);
+    holdTimer = setInterval(() => moveClaw(dir), 140);
+  };
+  const stopHold = () => { if (holdTimer) { clearInterval(holdTimer); holdTimer = null; } };
+  ['left-btn', 'right-btn'].forEach(id => {
+    const dir = id === 'left-btn' ? -1 : 1;
+    const el = document.getElementById(id);
+    el.addEventListener('mousedown', () => holdMove(dir));
+    el.addEventListener('touchstart', (e) => { e.preventDefault(); holdMove(dir); }, { passive: false });
+    ['mouseup', 'mouseleave', 'touchend', 'touchcancel'].forEach(ev => el.addEventListener(ev, stopHold));
+  });
+}
+
+document.addEventListener('DOMContentLoaded', bindEvents);
+
+</script>
+</body>
+</html>
