@@ -1,0 +1,645 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>ADAPT CULTURE ESCAPE</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600;800;900&family=JetBrains+Mono:wght@400;500;700&family=IBM+Plex+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet" />
+
+<style>
+:root{
+  --bg:#050505;
+  --panel:#060b08;
+  --green:#ffe600;
+  --green-soft:#ffe98a;
+  --green-line:#3a2f0f;
+  --cyan:#00ffff;
+  --red:#ff3b6b;
+  --amber:#ffcf3a;
+  --mono:'JetBrains Mono','IBM Plex Sans KR',ui-monospace,monospace;
+  --kr:'IBM Plex Sans KR','JetBrains Mono',sans-serif;
+  --display:'Orbitron','JetBrains Mono',monospace;
+  --glow-g:0 0 6px rgba(255,230,0,.55), 0 0 18px rgba(255,230,0,.28);
+  --glow-c:0 0 6px rgba(0,255,255,.55), 0 0 18px rgba(0,255,255,.28);
+}
+*{box-sizing:border-box;}
+html,body{height:100%;}
+body{
+  margin:0;
+  background:var(--bg);
+  color:var(--green);
+  font-family:var(--mono);
+  min-height:100vh;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:16px;
+  overflow-x:hidden;
+  -webkit-font-smoothing:antialiased;
+}
+
+/* ===== ambient layers ===== */
+#matrix{
+  position:fixed; inset:0; z-index:0;
+  opacity:.10; pointer-events:none;
+}
+.vignette{
+  position:fixed; inset:0; z-index:1; pointer-events:none;
+  background:radial-gradient(120% 90% at 50% 40%, rgba(0,0,0,0) 40%, rgba(0,0,0,.85) 100%);
+}
+.scanlines{
+  position:fixed; inset:0; z-index:2; pointer-events:none;
+  background:repeating-linear-gradient(
+    to bottom,
+    rgba(255,230,0,.035) 0px,
+    rgba(255,230,0,.035) 1px,
+    transparent 2px,
+    transparent 4px
+  );
+  mix-blend-mode:screen;
+  animation:scanmove 8s linear infinite;
+}
+@keyframes scanmove{ from{background-position:0 0;} to{background-position:0 200px;} }
+
+/* ===== stage / frame ===== */
+.stage{ position:relative; z-index:3; width:100%; max-width:840px; }
+
+.status-line{
+  font-size:11px; letter-spacing:2px; color:var(--green-soft);
+  opacity:.7; margin:0 4px 10px; display:flex; justify-content:space-between;
+  text-shadow:var(--glow-g);
+}
+.status-line .rec{ color:var(--red); text-shadow:0 0 8px rgba(255,59,107,.7); }
+.status-line .dot{ animation:blink 1.1s steps(1) infinite; }
+
+.frame{
+  position:relative;
+  padding:2px;
+  background:linear-gradient(135deg,var(--green),rgba(255,230,0,.25) 40%,var(--cyan) 100%);
+  clip-path:polygon(0 26px,26px 0,100% 0,100% calc(100% - 26px),calc(100% - 26px) 100%,0 100%);
+  box-shadow:var(--glow-g), inset 0 0 40px rgba(255,230,0,.06);
+  animation:flicker 6s infinite;
+}
+.panel{
+  position:relative;
+  background:
+    linear-gradient(180deg,rgba(255,230,0,.04),rgba(0,0,0,0) 30%),
+    var(--panel);
+  clip-path:polygon(0 25px,25px 0,100% 0,100% calc(100% - 25px),calc(100% - 25px) 100%,0 100%);
+  padding:44px 42px;
+}
+@keyframes flicker{
+  0%,100%{filter:brightness(1);}
+  47%{filter:brightness(1);}
+  48%{filter:brightness(.82);}
+  49%{filter:brightness(1.05);}
+  50%{filter:brightness(.9);}
+  51%{filter:brightness(1);}
+}
+
+/* corner ticks */
+.tick{position:absolute;width:16px;height:16px;border:2px solid var(--cyan);z-index:4;opacity:.9;filter:drop-shadow(0 0 4px rgba(0,255,255,.6));}
+.tick.tr{top:6px;right:6px;border-left:none;border-bottom:none;}
+.tick.bl{bottom:6px;left:6px;border-right:none;border-top:none;}
+
+/* ===== header ===== */
+.head{ text-align:center; margin-bottom:28px; }
+.title{
+  font-family:var(--display);
+  font-weight:900;
+  font-size:clamp(26px,5.2vw,46px);
+  letter-spacing:3px;
+  margin:0;
+  color:var(--green);
+  text-shadow:var(--glow-g);
+  display:flex; align-items:center; justify-content:center; gap:10px; flex-wrap:wrap;
+}
+.title .ico{ font-size:.9em; filter:drop-shadow(0 0 6px rgba(255,230,0,.7)); }
+.subtitle{
+  margin:10px 0 0; font-size:15px; letter-spacing:1px;
+  color:var(--green-soft); opacity:.72; font-family:var(--kr);
+}
+
+/* ===== start screen ===== */
+#startScreen{ text-align:center; animation:fadein .4s ease; }
+.start-log{
+  font-family:var(--mono); font-size:15px; text-align:left; line-height:1.9;
+  border:1px solid var(--green-line); background:rgba(255,230,0,.03);
+  padding:20px 22px; margin:0 0 26px; color:var(--green-soft);
+}
+.start-log .ok{ color:var(--green); }
+.start-desc{
+  font-family:var(--kr); font-size:17px; line-height:1.8;
+  color:#eafff2; margin:0 0 30px;
+  text-shadow:0 0 8px rgba(255,230,0,.2);
+}
+.start-desc b{ color:var(--cyan); text-shadow:var(--glow-c); }
+.start-meta{
+  display:flex; justify-content:center; gap:16px; margin:0 0 28px;
+  font-size:13px; letter-spacing:1px; color:var(--green-soft); opacity:.75; flex-wrap:wrap;
+}
+.start-meta span{ border:1px solid var(--green-line); padding:7px 13px; }
+
+/* ===== gauge ===== */
+.gauge{
+  border:1px solid var(--green-line);
+  background:rgba(255,230,0,.04);
+  padding:13px 15px; margin:0 0 26px;
+  clip-path:polygon(0 0,100% 0,100% 100%,10px 100%,0 calc(100% - 10px));
+}
+.gauge-top{
+  display:flex; justify-content:space-between; align-items:center;
+  font-size:14px; letter-spacing:1px; gap:8px; flex-wrap:wrap;
+}
+.gauge-top .sync{ color:var(--green); text-shadow:var(--glow-g); font-weight:700; white-space:nowrap; }
+.gauge-top .ascii{ color:var(--cyan); text-shadow:var(--glow-c); flex:1; text-align:center; min-width:120px; letter-spacing:0; }
+.gauge-top .count{ color:var(--green-soft); opacity:.8; white-space:nowrap; }
+.track{
+  margin-top:9px; height:8px; background:#0a1610; position:relative; overflow:hidden;
+  border:1px solid var(--green-line);
+}
+.fill{
+  position:absolute; left:0; top:0; bottom:0; width:0%;
+  background:linear-gradient(90deg,var(--green),var(--cyan));
+  box-shadow:0 0 12px rgba(255,230,0,.6);
+  transition:width .8s cubic-bezier(.2,.9,.2,1);
+}
+.fill::after{
+  content:""; position:absolute; inset:0;
+  background:repeating-linear-gradient(90deg,rgba(0,0,0,.25) 0 6px,transparent 6px 12px);
+  animation:stripe 1s linear infinite;
+}
+@keyframes stripe{ to{background-position:12px 0;} }
+
+/* ===== question ===== */
+.qline-row{
+  display:flex; align-items:center; justify-content:space-between;
+  margin-bottom:12px; gap:10px;
+}
+.qline{
+  font-size:16px; letter-spacing:2px; color:var(--cyan);
+  text-shadow:var(--glow-c); margin-bottom:0;
+}
+.back-btn{
+  font-family:var(--mono); font-size:13px; letter-spacing:1px;
+  background:transparent; color:var(--green-soft);
+  border:1px solid var(--green-line);
+  padding:8px 14px; cursor:pointer; white-space:nowrap;
+  transition:all .15s ease;
+}
+.back-btn:hover,.back-btn:focus-visible{
+  color:var(--green); border-color:var(--green); box-shadow:var(--glow-g); outline:none;
+}
+.qtext{
+  font-family:var(--kr); font-weight:700;
+  font-size:clamp(20px,3.4vw,27px); line-height:1.5;
+  margin:0 0 28px; color:#eafff2; min-height:1.5em;
+  text-shadow:0 0 10px rgba(255,230,0,.25);
+}
+.answers{ display:flex; flex-direction:column; gap:14px; }
+
+/* choice / ox buttons */
+.opt{
+  font-family:var(--kr); font-size:18px; text-align:left;
+  display:flex; align-items:center; gap:14px;
+  background:rgba(255,230,0,.03);
+  color:var(--green-soft);
+  border:1px solid var(--green-line);
+  padding:17px 19px; cursor:pointer; width:100%;
+  transition:all .18s ease;
+  clip-path:polygon(0 0,calc(100% - 10px) 0,100% 10px,100% 100%,10px 100%,0 calc(100% - 10px));
+}
+.opt .tag{
+  font-family:var(--mono); font-weight:700; font-size:15px;
+  color:var(--green); border:1px solid var(--green-line);
+  width:32px; height:32px; min-width:32px; display:flex; align-items:center; justify-content:center;
+  transition:all .18s ease;
+}
+.opt .cursor{ opacity:0; color:var(--cyan); margin-left:auto; transition:opacity .18s; }
+.opt:hover,.opt:focus-visible{
+  background:rgba(255,230,0,.12); color:#eafff2;
+  border-color:var(--green); box-shadow:var(--glow-g); outline:none;
+  transform:translateX(3px);
+}
+.opt:hover .tag,.opt:focus-visible .tag{ background:var(--green); color:#031a0e; box-shadow:var(--glow-g); }
+.opt:hover .cursor,.opt:focus-visible .cursor{ opacity:1; }
+
+.ox-row{ display:flex; gap:14px; }
+.opt.ox{
+  flex:1; justify-content:center; font-family:var(--display); font-size:32px; font-weight:800;
+  padding:28px 0; letter-spacing:2px; color:var(--green);
+}
+.opt.ox.no{ color:var(--red); }
+.opt.ox:hover{ box-shadow:var(--glow-g); }
+.opt.ox.no:hover{ border-color:var(--red); background:rgba(255,59,107,.12); box-shadow:0 0 18px rgba(255,59,107,.4); }
+
+/* input */
+.inputwrap{ position:relative; }
+.field{
+  display:flex; align-items:center; gap:8px;
+  border:1px solid var(--green-line); background:rgba(255,230,0,.04);
+  padding:0 18px; transition:all .2s ease;
+  clip-path:polygon(0 0,calc(100% - 12px) 0,100% 12px,100% 100%,12px 100%,0 calc(100% - 12px));
+}
+.field:focus-within{ border-color:var(--green); box-shadow:var(--glow-g); }
+.field .prompt{ color:var(--cyan); text-shadow:var(--glow-c); font-weight:700; }
+#inputBox{
+  flex:1; background:transparent; border:none; outline:none;
+  color:#eafff2; font-family:var(--kr); font-size:19px; padding:18px 0;
+  caret-color:var(--green);
+}
+#inputBox::placeholder{ color:rgba(255,233,138,.4); letter-spacing:1px; }
+
+.btn{
+  margin-top:16px; width:100%;
+  font-family:var(--kr); font-weight:700; font-size:18px; letter-spacing:1px;
+  background:linear-gradient(135deg,rgba(255,230,0,.16),rgba(0,255,255,.1));
+  color:var(--green); border:1px solid var(--green);
+  padding:18px; cursor:pointer; text-shadow:var(--glow-g);
+  box-shadow:var(--glow-g), inset 0 0 20px rgba(255,230,0,.05);
+  transition:all .18s ease;
+  clip-path:polygon(0 0,calc(100% - 12px) 0,100% 12px,100% 100%,12px 100%,0 calc(100% - 12px));
+}
+.btn:hover{ background:var(--green); color:#031a0e; box-shadow:0 0 22px rgba(255,230,0,.6); }
+.btn .k{ font-family:var(--mono); font-size:14px; opacity:.75; }
+
+/* error banner */
+.error{
+  margin-top:16px; border:1px solid var(--red);
+  background:rgba(255,59,107,.08); color:var(--red);
+  padding:14px 17px; font-size:15px; letter-spacing:1px;
+  text-shadow:0 0 8px rgba(255,59,107,.6);
+  clip-path:polygon(0 0,calc(100% - 10px) 0,100% 10px,100% 100%,10px 100%,0 calc(100% - 10px));
+  display:none;
+}
+.error.show{ display:block; animation:glitch .32s steps(2) 2, fadein .2s ease; }
+.error .em{ font-family:var(--mono); font-weight:700; }
+@keyframes glitch{ 0%{transform:translateX(0);} 25%{transform:translateX(-3px);} 75%{transform:translateX(3px);} 100%{transform:translateX(0);} }
+
+/* granted flash */
+.granted{
+  text-align:center; color:var(--green); font-family:var(--mono);
+  letter-spacing:3px; font-weight:700; font-size:18px; padding:26px 0;
+  text-shadow:var(--glow-g); animation:fadein .25s ease;
+}
+
+/* ===== result ===== */
+#result{ text-align:center; animation:fadein .5s ease; }
+.hidden{ display:none; }
+.hacked{
+  font-family:var(--display); font-weight:900;
+  font-size:clamp(28px,5.4vw,46px); letter-spacing:2px; margin:0 0 8px;
+  color:var(--green); text-shadow:var(--glow-g);
+  animation:flickText 2.5s infinite;
+}
+@keyframes flickText{ 0%,96%,100%{opacity:1;} 97%{opacity:.5;} 98%{opacity:1;} }
+.hacked-sub{ font-family:var(--mono); font-size:14px; letter-spacing:2px; color:var(--cyan); text-shadow:var(--glow-c); margin:0 0 26px; }
+.result-log{
+  font-family:var(--mono); font-size:15px; text-align:left; line-height:1.9;
+  border:1px solid var(--green-line); background:rgba(255,230,0,.03);
+  padding:20px 22px; margin:0 auto 26px; max-width:520px; color:var(--green-soft);
+}
+.result-log .ok{ color:var(--green); }
+.result-msg{ font-family:var(--kr); color:#eafff2; font-size:18px; line-height:1.6; margin:0 0 28px; }
+.cta{
+  display:inline-flex; align-items:center; gap:10px; text-decoration:none;
+  font-family:var(--kr); font-weight:700; font-size:19px; letter-spacing:1px;
+  background:linear-gradient(135deg,var(--green),var(--cyan));
+  color:#031a0e; padding:18px 38px; cursor:pointer;
+  box-shadow:0 0 24px rgba(255,230,0,.5);
+  clip-path:polygon(0 0,calc(100% - 14px) 0,100% 14px,100% 100%,14px 100%,0 calc(100% - 14px));
+  transition:transform .15s ease, box-shadow .15s ease;
+}
+.cta:hover{ transform:translateY(-2px); box-shadow:0 0 34px rgba(0,255,255,.7); }
+
+.blink{ animation:blink 1.05s steps(1) infinite; }
+@keyframes blink{ 50%{opacity:0;} }
+@keyframes fadein{ from{opacity:0;transform:translateY(6px);} to{opacity:1;transform:none;} }
+
+.fx-in{ animation:decrypt .35s ease; }
+@keyframes decrypt{ from{opacity:0;filter:blur(2px);} to{opacity:1;filter:none;} }
+
+@media (max-width:420px){
+  .panel{ padding:24px 18px; }
+  .gauge-top .ascii{ display:none; }
+}
+@media (prefers-reduced-motion:reduce){
+  .scanlines,.fill::after,.frame,.hacked,.blink,.status-line .dot{ animation:none !important; }
+  #matrix{ display:none; }
+}
+</style>
+</head>
+
+<body>
+<canvas id="matrix"></canvas>
+<div class="vignette"></div>
+<div class="scanlines"></div>
+
+<div class="stage">
+  <div class="status-line">
+    <span>&gt; ADAPT_OS v2.4 :: CULTURE FIREWALL</span>
+    <span class="rec">● REC<span class="dot">_</span></span>
+  </div>
+
+  <div class="frame">
+    <span class="tick tr"></span>
+    <span class="tick bl"></span>
+    <div class="panel">
+
+      <div class="head">
+        <h1 class="title"><span class="ico">🎮</span> ADAPT CULTURE ESCAPE</h1>
+        <p class="subtitle">문제를 풀고 ADAPT의 문화를 탈출하세요</p>
+      </div>
+
+      <div id="startScreen">
+        <div class="start-log">
+          &gt; connecting to ADAPT_OS........ <span class="ok">[OK]</span><br>
+          &gt; culture firewall detected..... <span class="ok">[OK]</span><br>
+          &gt; access mode.................... <span class="ok">INFILTRATION</span>
+        </div>
+        <p class="start-desc">
+          당신은 지금 ADAPT의 문화 방화벽 앞에 서 있습니다.<br>
+          총 <b>7개의 질문</b>을 모두 통과해야 시스템 잠금을 해제할 수 있습니다.
+        </p>
+        <div class="start-meta">
+          <span>QUESTIONS: 7</span>
+          <span>TYPE: 객관식 / OX / 주관식</span>
+          <span>PASS RATE: 100%</span>
+        </div>
+        <button class="btn" id="startBtn">시스템 침투 시작 <span class="k">(START)</span></button>
+      </div>
+
+      <div id="quizWrap" class="hidden">
+        <div class="gauge">
+          <div class="gauge-top">
+            <span class="sync" id="syncLabel">SYSTEM SYNC: 0%</span>
+            <span class="ascii" id="asciiBar">[░░░░░░░░░░░░░░░░░░░░]</span>
+            <span class="count" id="countLabel">1/7 QUESTIONS</span>
+          </div>
+          <div class="track"><div class="fill" id="fill"></div></div>
+        </div>
+
+        <div id="quiz"></div>
+        <div id="result" class="hidden"></div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+/* ================= QUIZ DATA (원본 유지) ================= */
+const questions = [
+  { type:"input",  q:"풀리는 ______의 조화로 클린 뷰티를 완성합니다", a:["자연과 과학"] },
+  { type:"choice", q:"푸드올로지의 핵심은?", options:["극단적인 다이어트","균형 있는 루틴","빠른 체중 감량"], a:"균형 있는 루틴" },
+  { type:"choice", q:"OBgE의 핵심 방향은?", options:["트렌드 중심 스타일링","자연스러운 그루밍","과한 변화"], a:"자연스러운 그루밍" },
+  { type:"input",  q:"어댑트는 ______은 강화하고 실패는 과감히 축소합니다", a:["성공"] },
+  { type:"choice", q:"출시 3개월 만에 7만개 달성 제품은?", options:["푸드올로지 올리브레몬샷","오브제 선스틱","풀리 노세범파우더","푸드올로지 클렌즈48시간"], a:"풀리 노세범파우더" },
+  { type:"ox",     q:"어댑트는 매월 마지막 주 금요일 2시간 조기 퇴근을 한다", a:"O" },
+  { type:"input",  q:"어댑트는 고객의 ______를 발견하고 이를 해결하는 K-뷰티 기업이다", a:["문제","불편함","일상의 문제"] }
+];
+
+/* 👉 채용 페이지 링크를 여기에 넣으세요 */
+const CAREERS_URL = "https://career.adaptkorea.com/";
+
+const TOTAL = questions.length;
+let idx = 0;
+let locked = false;
+
+const quizEl   = document.getElementById("quiz");
+const resultEl = document.getElementById("result");
+const fillEl   = document.getElementById("fill");
+const syncEl   = document.getElementById("syncLabel");
+const asciiEl  = document.getElementById("asciiBar");
+const countEl  = document.getElementById("countLabel");
+
+const reduceMotion = window.matchMedia("(prefers-reduced-motion:reduce)").matches;
+
+/* ---------- start screen ---------- */
+document.getElementById("startBtn").addEventListener("click", startQuiz);
+function startQuiz(){
+  document.getElementById("startScreen").classList.add("hidden");
+  document.getElementById("quizWrap").classList.remove("hidden");
+  render();
+}
+
+/* ---------- gauge ---------- */
+function updateGauge(){
+  const pct = Math.round((idx / TOTAL) * 100);
+  const filled = Math.round((pct / 100) * 20);
+  syncEl.textContent  = "SYSTEM SYNC: " + pct + "%";
+  asciiEl.textContent = "[" + "█".repeat(filled) + "░".repeat(20 - filled) + "]";
+  countEl.textContent = Math.min(idx + 1, TOTAL) + "/" + TOTAL + " QUESTIONS";
+  fillEl.style.width  = pct + "%";
+}
+
+/* ---------- text decrypt effect ---------- */
+const POOL = "アカサ0123456789ABCDEF#%&*ｦｱｲｳｴ가나다라마";
+function decrypt(el, finalText, done){
+  if (reduceMotion){ el.textContent = finalText; el.classList.add("fx-in"); done && done(); return; }
+  const len = finalText.length;
+  let frame = 0;
+  const totalFrames = 14;
+  const tick = () => {
+    let out = "";
+    for (let i = 0; i < len; i++){
+      const revealAt = (i / len) * totalFrames;
+      if (frame >= revealAt || finalText[i] === " ") out += finalText[i];
+      else out += POOL[Math.floor(Math.random() * POOL.length)];
+    }
+    el.textContent = out;
+    frame++;
+    if (frame <= totalFrames) requestAnimationFrame(tick);
+    else { el.textContent = finalText; done && done(); }
+  };
+  tick();
+}
+
+/* ---------- render ---------- */
+function render(){
+  locked = false;
+  updateGauge();
+  const q = questions[idx];
+
+  quizEl.innerHTML = `
+    <div class="qline-row fx-in">
+      <div class="qline">Q${idx + 1}<span class="blink">_</span></div>
+      <button class="back-btn" id="backBtn">&lt; BACK</button>
+    </div>
+    <h2 class="qtext" id="qtext"></h2>
+    <div class="answers fx-in" id="answers"></div>
+    <div class="error" id="error"></div>
+  `;
+
+  document.getElementById("backBtn").addEventListener("click", goBack);
+
+  const answers = document.getElementById("answers");
+
+  if (q.type === "choice"){
+    answers.innerHTML = q.options.map((o, i) => `
+      <button class="opt" data-val="${o}">
+        <span class="tag">${String.fromCharCode(65 + i)}</span>
+        <span>${o}</span>
+        <span class="cursor">&gt;_</span>
+      </button>`).join("");
+    answers.querySelectorAll(".opt").forEach(b =>
+      b.addEventListener("click", () => check(b.dataset.val)));
+  }
+
+  else if (q.type === "ox"){
+    answers.innerHTML = `
+      <div class="ox-row">
+        <button class="opt ox" data-val="O">[ O ]</button>
+        <button class="opt ox no" data-val="X">[ X ]</button>
+      </div>`;
+    answers.querySelectorAll(".opt").forEach(b =>
+      b.addEventListener("click", () => check(b.dataset.val)));
+  }
+
+  else if (q.type === "input"){
+    answers.innerHTML = `
+      <div class="inputwrap">
+        <div class="field">
+          <span class="prompt">&gt;</span>
+          <input id="inputBox" autocomplete="off" spellcheck="false" placeholder="[ 정답 입력 ]" />
+        </div>
+        <button class="btn" id="submitBtn">제출 <span class="k">(ENTER)</span></button>
+      </div>`;
+    const input = document.getElementById("inputBox");
+    document.getElementById("submitBtn").addEventListener("click", submit);
+    // ✅ Enter 키 제출
+    input.addEventListener("keydown", (e) => {
+      if (e.key === "Enter"){ e.preventDefault(); submit(); }
+    });
+  }
+
+  // 데이터 로딩되는 듯한 해독 애니메이션
+  decrypt(document.getElementById("qtext"), q.q, () => {
+    const input = document.getElementById("inputBox");
+    if (input) input.focus();
+  });
+}
+
+/* ---------- back: 이전 문제로 이동 (첫 문제면 시작화면으로) ---------- */
+function goBack(){
+  if (locked) return;
+  if (idx > 0){
+    idx--;
+    render();
+  } else {
+    document.getElementById("quizWrap").classList.add("hidden");
+    document.getElementById("startScreen").classList.remove("hidden");
+  }
+}
+
+/* ---------- answer checking (예외 처리 강화) ---------- */
+function normalize(s){ return (s || "").trim().replace(/\s+/g, ""); }
+
+function check(raw){
+  if (locked) return;
+  const q = questions[idx];
+  let ok;
+
+  if (q.type === "ox"){
+    // 소문자 o/x, 앞뒤 공백 모두 허용
+    const v = (raw || "").trim().toUpperCase();
+    ok = v === String(q.a).trim().toUpperCase();
+  } else {
+    const val = normalize(raw);
+    const answers = Array.isArray(q.a) ? q.a : [q.a];
+    ok = answers.some(a => normalize(a) === val);
+  }
+
+  ok ? advance() : wrong(raw);
+}
+
+function submit(){
+  const box = document.getElementById("inputBox");
+  if (box) check(box.value);
+}
+
+/* ---------- wrong: 오답 피드백 + 입력창 초기화 + 포커스 ---------- */
+function wrong(raw){
+  const err = document.getElementById("error");
+  if (err){
+    err.innerHTML = `<span class="em">ACCESS DENIED //</span> 잘못된 코드입니다. 다시 시도하세요 👀`;
+    err.classList.remove("show");
+    void err.offsetWidth;           // reflow → 애니메이션 재생
+    err.classList.add("show");
+  }
+  const input = document.getElementById("inputBox");
+  if (input){
+    input.value = "";               // ✅ 오답 텍스트 초기화
+    input.focus();                  // ✅ 커서 자동 이동
+  }
+}
+
+/* ---------- correct: 게이지 충전 → 다음 문제 ---------- */
+function advance(){
+  locked = true;
+  idx++;
+  updateGauge();                    // 게이지 충전 애니메이션
+
+  quizEl.innerHTML = `<div class="granted">&gt; ACCESS GRANTED ✓ SYNCING...</div>`;
+
+  setTimeout(() => {
+    if (idx >= TOTAL) finish();
+    else render();
+  }, reduceMotion ? 200 : 650);
+}
+
+/* ---------- finish: SYSTEM HACKED ---------- */
+function finish(){
+  idx = TOTAL;
+  updateGauge();
+  quizEl.innerHTML = "";
+  resultEl.classList.remove("hidden");
+  resultEl.innerHTML = `
+    <h2 class="hacked">🎉 SYSTEM HACKED</h2>
+    <p class="hacked-sub">ADAPT CULTURE CODE :: DECRYPTED</p>
+    <div class="result-log">
+      &gt; firewall bypassed......... <span class="ok">[OK]</span><br>
+      &gt; culture_dna loaded........ <span class="ok">[OK]</span><br>
+      &gt; sync rate................. <span class="ok">100%</span><br>
+      &gt; status.................... <span class="ok">ADAPTED</span>
+    </div>
+    <p class="result-msg">ADAPT 문화 코드 해킹 완료.<br>당신은 ADAPT에 완전히 <b>적응(ADAPT)</b>할 준비가 되었습니다.</p>
+    <a class="cta" href="${CAREERS_URL}" target="_blank" rel="noopener">채용 페이지로 진입</a>
+  `;
+}
+
+/* ---------- matrix rain (ambient) ---------- */
+(function matrixRain(){
+  if (reduceMotion) return;
+  const c = document.getElementById("matrix");
+  const ctx = c.getContext("2d");
+  let cols, drops, fontSize = 14;
+  const chars = "アイウエオカ01ADAPTﾊﾋﾌ0123456789".split("");
+  function resize(){
+    c.width = window.innerWidth; c.height = window.innerHeight;
+    cols = Math.floor(c.width / fontSize);
+    drops = Array(cols).fill(1);
+  }
+  resize();
+  window.addEventListener("resize", resize);
+  setInterval(() => {
+    ctx.fillStyle = "rgba(5,5,5,0.08)";
+    ctx.fillRect(0, 0, c.width, c.height);
+    ctx.fillStyle = "#ffe600";
+    ctx.font = fontSize + "px monospace";
+    for (let i = 0; i < drops.length; i++){
+      const t = chars[Math.floor(Math.random() * chars.length)];
+      ctx.fillText(t, i * fontSize, drops[i] * fontSize);
+      if (drops[i] * fontSize > c.height && Math.random() > 0.975) drops[i] = 0;
+      drops[i]++;
+    }
+  }, 60);
+})();
+
+/* boot: 시작 화면에서 대기, START 클릭 시 render() 호출 */
+</script>
+</body>
+</html>
